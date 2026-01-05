@@ -17,9 +17,9 @@ MODEL=$(echo "$input" | jq -r '.model.display_name // "Unknown"')
 CONTEXT_SIZE=$(echo "$input" | jq -r '.context_window.context_window_size // 200000')
 USAGE=$(echo "$input" | jq '.context_window.current_usage // empty')
 
-# Session tracking file (per-session cost tracking)
-SESSION_ID=$(echo "$input" | jq -r '.session_id // "default"')
-TRACKING_FILE="/tmp/claude_session_${SESSION_ID}.json"
+# Global cost tracking file (persists across reboots, reset with /reset-money)
+mkdir -p "$HOME/.claude"
+TRACKING_FILE="$HOME/.claude/cost-tally.json"
 
 # Calculate context usage
 if [ -n "$USAGE" ] && [ "$USAGE" != "null" ]; then
@@ -81,23 +81,54 @@ case "$MODEL" in
         ;;
 esac
 
-# Track cumulative cost for session
-if [ -f "$TRACKING_FILE" ]; then
-    PREV_INPUT=$(jq -r '.total_input // 0' "$TRACKING_FILE")
-    PREV_OUTPUT=$(jq -r '.total_output // 0' "$TRACKING_FILE")
-    START_TIME=$(jq -r '.start_time // 0' "$TRACKING_FILE")
+# Track cumulative cost across all sessions (global tally)
+SESSION_ID=$(echo "$input" | jq -r '.session_id // "default"')
+
+if [ -f "$TRACKING_FILE" ] && jq -e . "$TRACKING_FILE" >/dev/null 2>&1; then
+    TOTAL_INPUT=$(jq -r '.total_input // 0' "$TRACKING_FILE")
+    TOTAL_OUTPUT=$(jq -r '.total_output // 0' "$TRACKING_FILE")
+    START_TIME=$(jq -r '.start_time // empty' "$TRACKING_FILE")
+    LAST_SESSION=$(jq -r '.last_session // ""' "$TRACKING_FILE")
+    LAST_INPUT=$(jq -r '.last_input // 0' "$TRACKING_FILE")
+    LAST_OUTPUT=$(jq -r '.last_output // 0' "$TRACKING_FILE")
 else
-    PREV_INPUT=0
-    PREV_OUTPUT=0
+    TOTAL_INPUT=0
+    TOTAL_OUTPUT=0
+    LAST_SESSION=""
+    LAST_INPUT=0
+    LAST_OUTPUT=0
+fi
+
+# Ensure START_TIME is valid (set to now if empty/invalid)
+if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ] || [ "$START_TIME" -le 0 ] 2>/dev/null; then
     START_TIME=$(date +%s)
 fi
 
-# Update totals (use max to handle context resets)
-TOTAL_INPUT=$((PREV_INPUT > INPUT_TOKENS ? PREV_INPUT : INPUT_TOKENS))
-TOTAL_OUTPUT=$((PREV_OUTPUT > OUTPUT_TOKENS ? PREV_OUTPUT : OUTPUT_TOKENS))
+# Calculate delta tokens to add
+if [ "$SESSION_ID" = "$LAST_SESSION" ]; then
+    # Same session: add only the increase since last check
+    DELTA_INPUT=$((INPUT_TOKENS > LAST_INPUT ? INPUT_TOKENS - LAST_INPUT : 0))
+    DELTA_OUTPUT=$((OUTPUT_TOKENS > LAST_OUTPUT ? OUTPUT_TOKENS - LAST_OUTPUT : 0))
+else
+    # New session: add all tokens (first time seeing this session)
+    DELTA_INPUT=$INPUT_TOKENS
+    DELTA_OUTPUT=$OUTPUT_TOKENS
+fi
+
+TOTAL_INPUT=$((TOTAL_INPUT + DELTA_INPUT))
+TOTAL_OUTPUT=$((TOTAL_OUTPUT + DELTA_OUTPUT))
 
 # Save tracking data
-echo "{\"total_input\": $TOTAL_INPUT, \"total_output\": $TOTAL_OUTPUT, \"start_time\": $START_TIME}" > "$TRACKING_FILE"
+cat > "$TRACKING_FILE" << EOF
+{
+  "total_input": $TOTAL_INPUT,
+  "total_output": $TOTAL_OUTPUT,
+  "start_time": $START_TIME,
+  "last_session": "$SESSION_ID",
+  "last_input": $INPUT_TOKENS,
+  "last_output": $OUTPUT_TOKENS
+}
+EOF
 
 # Calculate cost in dollars
 INPUT_COST=$(echo "scale=4; $TOTAL_INPUT * $INPUT_RATE / 1000000" | bc)
