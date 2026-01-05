@@ -12,7 +12,7 @@ Save the current conversation context as a checkpoint file that can be resumed l
 
 First, run the fast backup script to copy the raw session data:
 
-!`/Users/dylan/Desktop/projects/claudetools/commands/cc-fast.sh "$ARGUMENTS" "$(pwd)" 2>&1`
+!`"$HOME/.claude/commands/cc-fast.sh" "$ARGUMENTS" "$(pwd)" 2>&1`
 
 ## Step 2: Create readable summary
 

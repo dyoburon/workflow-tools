@@ -245,6 +245,17 @@ grep -A1 "UserPromptSubmit" ~/.claude/debug/latest
 
 **Symptom:** `$send` shows "Interrupted" prompt instead of executing.
 
-**Cause:** The hook isn't firing. See above - the session likely started before hooks were configured.
+**Possible Causes:**
 
-**Fix:** Close that Claude instance and start a new one.
+1. **Session started before hooks configured** - restart Claude Code
+
+2. **Invalid JSON in hook output** - if the saved prompt contains special characters (quotes, backslashes, newlines), the JSON output may be malformed.
+
+**Debug:**
+```bash
+grep -i "Failed to parse" ~/.claude/debug/latest
+```
+
+If you see `SyntaxError: JSON Parse error`, the hook output has invalid JSON.
+
+**Fix:** The `send-hook.sh` uses `jq -Rs` to properly escape content before embedding in JSON. Ensure you have the latest version of the hook.
