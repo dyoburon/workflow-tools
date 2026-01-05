@@ -103,20 +103,42 @@ if [[ "$prompt" =~ ^\$cc-resume[[:space:]] ]]; then
         context+="**Created:** $created\n**Project:** $project\n\n"
     fi
 
-    # If summary exists, use it
+    # If summary exists, use it; otherwise inject full checkpoint
     if [ -f "$summary_file" ]; then
         summary_content=$(cat "$summary_file")
         context+="## Checkpoint Summary\n\n$summary_content\n\n"
         context+="---\n\n**Instructions:** Review this checkpoint summary and ask the user how they'd like to proceed."
+        escaped_context=$(echo -e "$context" | jq -Rs '.')
     else
-        # No summary, provide instructions to read raw data
-        context+="## No Summary Available\n\n"
-        context+="The raw checkpoint data is at: $jsonl_file\n\n"
-        context+="**Instructions:** Read the checkpoint file to understand the previous conversation context, then summarize what was being worked on and ask how to proceed."
-    fi
+        # No summary - inject the full checkpoint conversation
+        context+="## Full Conversation History\n\n"
+        context+="Below is the complete conversation from this checkpoint. Review it and ask the user how they'd like to proceed.\n\n"
+        context+="---\n\n"
 
-    # Use jq to properly escape the context for JSON
-    escaped_context=$(echo -e "$context" | jq -Rs '.')
+        # Read jsonl and format as readable conversation
+        conversation=$(cat "$jsonl_file" | jq -r '
+            select(.type == "user" or .type == "assistant") |
+            if .type == "user" then
+                "**User:** " + (
+                    if .message.content | type == "string" then .message.content
+                    elif .message.content | type == "array" then (.message.content | map(select(.type == "text") | .text) | join(" "))
+                    else "[no message]"
+                    end
+                )
+            elif .type == "assistant" then
+                "**Assistant:** " + (
+                    if .message.content | type == "string" then .message.content
+                    elif .message.content | type == "array" then (.message.content | map(select(.type == "text") | .text) | join(" "))
+                    else "[no message]"
+                    end
+                )
+            else empty end
+        ' 2>/dev/null)
+
+        # Combine and escape for JSON
+        full_context="${context}${conversation}"
+        escaped_context=$(echo "$full_context" | jq -Rs '.')
+    fi
 
     echo "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":$escaped_context}}"
     exit 0
