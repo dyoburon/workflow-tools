@@ -21,14 +21,13 @@ USAGE=$(echo "$input" | jq '.context_window.current_usage // empty')
 mkdir -p "$HOME/.claude"
 TRACKING_FILE="$HOME/.claude/cost-tally.json"
 
-# Calculate context usage
+# Calculate context usage (from current_usage - for context window %)
 if [ -n "$USAGE" ] && [ "$USAGE" != "null" ]; then
-    INPUT_TOKENS=$(echo "$USAGE" | jq -r '.input_tokens // 0')
-    OUTPUT_TOKENS=$(echo "$USAGE" | jq -r '.output_tokens // 0')
+    CONTEXT_INPUT=$(echo "$USAGE" | jq -r '.input_tokens // 0')
     CACHE_CREATE=$(echo "$USAGE" | jq -r '.cache_creation_input_tokens // 0')
     CACHE_READ=$(echo "$USAGE" | jq -r '.cache_read_input_tokens // 0')
 
-    CURRENT_TOKENS=$((INPUT_TOKENS + CACHE_CREATE + CACHE_READ))
+    CURRENT_TOKENS=$((CONTEXT_INPUT + CACHE_CREATE + CACHE_READ))
     PERCENT=$((CURRENT_TOKENS * 100 / CONTEXT_SIZE))
 
     # Format token count (e.g., 84K/200K)
@@ -38,9 +37,11 @@ if [ -n "$USAGE" ] && [ "$USAGE" != "null" ]; then
 else
     PERCENT=0
     TOKEN_DISPLAY="0K"
-    INPUT_TOKENS=0
-    OUTPUT_TOKENS=0
 fi
+
+# Get CUMULATIVE totals for cost tracking (from context_window level, not current_usage)
+TOTAL_INPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
+TOTAL_OUTPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
 
 # Color-coded context indicator
 if [ "$PERCENT" -ge 80 ]; then
@@ -104,8 +105,8 @@ if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ] || [ "$START_TIME" -le 0 ]
 fi
 
 # Update this session's high-water mark (only goes up)
-NEW_SESSION_INPUT=$((INPUT_TOKENS > PREV_SESSION_INPUT ? INPUT_TOKENS : PREV_SESSION_INPUT))
-NEW_SESSION_OUTPUT=$((OUTPUT_TOKENS > PREV_SESSION_OUTPUT ? OUTPUT_TOKENS : PREV_SESSION_OUTPUT))
+NEW_SESSION_INPUT=$((TOTAL_INPUT_TOKENS > PREV_SESSION_INPUT ? TOTAL_INPUT_TOKENS : PREV_SESSION_INPUT))
+NEW_SESSION_OUTPUT=$((TOTAL_OUTPUT_TOKENS > PREV_SESSION_OUTPUT ? TOTAL_OUTPUT_TOKENS : PREV_SESSION_OUTPUT))
 
 # Update sessions object with this session's new values
 SESSIONS_JSON=$(echo "$SESSIONS_JSON" | jq -c --arg sid "$SESSION_ID" \
