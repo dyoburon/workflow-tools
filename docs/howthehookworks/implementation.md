@@ -63,7 +63,7 @@ This hook system allows you to save prompts in one Claude Code session and execu
         "hooks": [
           {
             "type": "command",
-            "command": "/Users/dylan/.claude/hooks/pending-handler.sh"
+            "command": "$HOME/.claude/hooks/pending-handler.sh"
           }
         ]
       }

@@ -75,7 +75,7 @@ Claude Code sends this JSON to stdin on each status update:
     }
   },
   "session_id": "abc123-def456",
-  "cwd": "/Users/dylan/project"
+  "cwd": "/path/to/project"
 }
 ```
 

@@ -6,7 +6,7 @@
 # {
 #   "statusLine": {
 #     "type": "command",
-#     "command": "/Users/dylan/Desktop/projects/claudetools/statusline/statusline.sh"
+#     "command": "$HOME/.claude/statusline/statusline.sh"
 #   }
 # }
 
@@ -61,11 +61,11 @@ else
 fi
 
 # Calculate would-be cost based on model
-# Pricing (per 1M tokens): Opus $15 in/$75 out, Sonnet $3 in/$15 out
+# Pricing (per 1M tokens): Opus 4.5 $5 in/$25 out, Sonnet 4 $3 in/$15 out
 case "$MODEL" in
     *Opus*)
-        INPUT_RATE=15
-        OUTPUT_RATE=75
+        INPUT_RATE=5
+        OUTPUT_RATE=25
         ;;
     *Sonnet*)
         INPUT_RATE=3
