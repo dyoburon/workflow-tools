@@ -82,21 +82,20 @@ case "$MODEL" in
 esac
 
 # Track cumulative cost across all sessions (global tally)
+# Each session tracks its own high-water mark, total = sum of all sessions
 SESSION_ID=$(echo "$input" | jq -r '.session_id // "default"')
 
 if [ -f "$TRACKING_FILE" ] && jq -e . "$TRACKING_FILE" >/dev/null 2>&1; then
-    TOTAL_INPUT=$(jq -r '.total_input // 0' "$TRACKING_FILE")
-    TOTAL_OUTPUT=$(jq -r '.total_output // 0' "$TRACKING_FILE")
     START_TIME=$(jq -r '.start_time // empty' "$TRACKING_FILE")
-    LAST_SESSION=$(jq -r '.last_session // ""' "$TRACKING_FILE")
-    LAST_INPUT=$(jq -r '.last_input // 0' "$TRACKING_FILE")
-    LAST_OUTPUT=$(jq -r '.last_output // 0' "$TRACKING_FILE")
+    # Get this session's previous high-water mark
+    PREV_SESSION_INPUT=$(jq -r --arg sid "$SESSION_ID" '.sessions[$sid].input // 0' "$TRACKING_FILE")
+    PREV_SESSION_OUTPUT=$(jq -r --arg sid "$SESSION_ID" '.sessions[$sid].output // 0' "$TRACKING_FILE")
+    # Read existing sessions object
+    SESSIONS_JSON=$(jq -c '.sessions // {}' "$TRACKING_FILE")
 else
-    TOTAL_INPUT=0
-    TOTAL_OUTPUT=0
-    LAST_SESSION=""
-    LAST_INPUT=0
-    LAST_OUTPUT=0
+    PREV_SESSION_INPUT=0
+    PREV_SESSION_OUTPUT=0
+    SESSIONS_JSON="{}"
 fi
 
 # Ensure START_TIME is valid (set to now if empty/invalid)
@@ -104,31 +103,28 @@ if [ -z "$START_TIME" ] || [ "$START_TIME" = "null" ] || [ "$START_TIME" -le 0 ]
     START_TIME=$(date +%s)
 fi
 
-# Calculate delta tokens to add
-if [ "$SESSION_ID" = "$LAST_SESSION" ]; then
-    # Same session: add only the increase since last check
-    DELTA_INPUT=$((INPUT_TOKENS > LAST_INPUT ? INPUT_TOKENS - LAST_INPUT : 0))
-    DELTA_OUTPUT=$((OUTPUT_TOKENS > LAST_OUTPUT ? OUTPUT_TOKENS - LAST_OUTPUT : 0))
-else
-    # New session: add all tokens (first time seeing this session)
-    DELTA_INPUT=$INPUT_TOKENS
-    DELTA_OUTPUT=$OUTPUT_TOKENS
-fi
+# Update this session's high-water mark (only goes up)
+NEW_SESSION_INPUT=$((INPUT_TOKENS > PREV_SESSION_INPUT ? INPUT_TOKENS : PREV_SESSION_INPUT))
+NEW_SESSION_OUTPUT=$((OUTPUT_TOKENS > PREV_SESSION_OUTPUT ? OUTPUT_TOKENS : PREV_SESSION_OUTPUT))
 
-TOTAL_INPUT=$((TOTAL_INPUT + DELTA_INPUT))
-TOTAL_OUTPUT=$((TOTAL_OUTPUT + DELTA_OUTPUT))
+# Update sessions object with this session's new values
+SESSIONS_JSON=$(echo "$SESSIONS_JSON" | jq -c --arg sid "$SESSION_ID" \
+    --argjson input "$NEW_SESSION_INPUT" --argjson output "$NEW_SESSION_OUTPUT" \
+    '.[$sid] = {input: $input, output: $output}')
 
-# Save tracking data
-cat > "$TRACKING_FILE" << EOF
+# Calculate totals as sum of all sessions
+TOTAL_INPUT=$(echo "$SESSIONS_JSON" | jq '[.[].input] | add // 0')
+TOTAL_OUTPUT=$(echo "$SESSIONS_JSON" | jq '[.[].output] | add // 0')
+
+# Save tracking data (atomic write)
+TEMP_FILE=$(mktemp)
+cat > "$TEMP_FILE" << EOF
 {
-  "total_input": $TOTAL_INPUT,
-  "total_output": $TOTAL_OUTPUT,
-  "start_time": $START_TIME,
-  "last_session": "$SESSION_ID",
-  "last_input": $INPUT_TOKENS,
-  "last_output": $OUTPUT_TOKENS
+  "sessions": $SESSIONS_JSON,
+  "start_time": $START_TIME
 }
 EOF
+mv "$TEMP_FILE" "$TRACKING_FILE"
 
 # Calculate cost in dollars
 INPUT_COST=$(echo "scale=4; $TOTAL_INPUT * $INPUT_RATE / 1000000" | bc)

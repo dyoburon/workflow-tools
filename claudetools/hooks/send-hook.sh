@@ -1,35 +1,15 @@
 #!/bin/bash
-# Hook to intercept $pending and $send commands
+# Hook for $send only
 
 input=$(cat)
 prompt=$(echo "$input" | jq -r '.prompt')
 
-# Handle $pending <name> <prompt>
-if [[ "$prompt" =~ ^\$pending[[:space:]] ]]; then
-    args="${prompt#\$pending }"
-    name="${args%% *}"
-    content="${args#* }"
-
-    if [ -z "$name" ] || [ "$name" = "$content" ]; then
-        echo '{"decision":"block","reason":"Usage: $pending <name> <prompt>"}'
-        exit 0
-    fi
-
-    mkdir -p ~/.claude/pending-prompts
-    echo "$content" > ~/.claude/pending-prompts/"$name".txt
-
-    echo "{\"decision\":\"block\",\"reason\":\"Saved pending prompt: $name\\n\\nExecute with: \$send $name\"}"
-    exit 0
-fi
-
-# Handle $send <name>
 if [[ "$prompt" =~ ^\$send[[:space:]] ]]; then
     name="${prompt#\$send }"
-    name="${name%% *}"  # Just the first word
+    name="${name%% *}"
     file="$HOME/.claude/pending-prompts/$name.txt"
 
     if [ ! -f "$file" ]; then
-        # List available prompts
         available=$(ls ~/.claude/pending-prompts/*.txt 2>/dev/null | xargs -I {} basename {} .txt | tr '\n' ', ' | sed 's/,$//')
         if [ -z "$available" ]; then
             available="none"
@@ -41,10 +21,8 @@ if [[ "$prompt" =~ ^\$send[[:space:]] ]]; then
     content=$(cat "$file")
     rm "$file"
 
-    # Inject the saved prompt as context for Claude to execute
     echo "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"The user wants you to execute this saved prompt:\\n\\n$content\"}}"
     exit 0
 fi
 
-# Let everything else through
 exit 0
