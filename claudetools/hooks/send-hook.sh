@@ -21,7 +21,8 @@ if [[ "$prompt" =~ ^\$send[[:space:]] ]]; then
     content=$(cat "$file")
     rm "$file"
 
-    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"The user wants you to execute this saved prompt:\\n\\n$content\"}}"
+    # Use jq to build valid JSON with properly escaped content
+    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":$(echo "The user wants you to execute this saved prompt:\n\n$content" | jq -Rs '.')}}"
     exit 0
 fi
 

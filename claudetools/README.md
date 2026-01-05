@@ -1,244 +1,160 @@
 # Claude Code Tools
 
-Custom tools and extensions for Claude Code.
+Custom hooks and extensions for Claude Code CLI.
 
-## Quick Start
+## Quick Install
+
+```bash
+# Clone and run install script
+git clone https://github.com/YOUR_USERNAME/workflow-tools
+cd workflow-tools/claudetools
+./install.sh
+```
+
+Or manually:
 
 ```bash
 # 1. Copy hooks
-mkdir -p ~/.claude/hooks
+mkdir -p ~/.claude/hooks ~/.claude/commands
 cp hooks/*.sh ~/.claude/hooks/
-chmod +x ~/.claude/hooks/*.sh
+cp commands/*.sh ~/.claude/commands/
+chmod +x ~/.claude/hooks/*.sh ~/.claude/commands/*.sh
 
-# 2. Copy commands
-mkdir -p ~/.claude/commands
-cp commands/*.md ~/.claude/commands/
+# 2. Copy statusline (optional)
+mkdir -p ~/.claude/statusline
+cp statusline/statusline.sh ~/.claude/statusline/
+chmod +x ~/.claude/statusline/statusline.sh
 
-# 3. Add configuration to ~/.claude/settings.json (see below)
+# 3. Add configuration (see below)
+# 4. Restart Claude Code
 ```
 
 ## Configuration
 
-Add the following to your `~/.claude/settings.json`:
+Add to `~/.claude/settings.json`:
 
 ```json
 {
+  "permissions": {
+    "allow": [
+      "Bash(\"$HOME/.claude/commands/cc-fast.sh\":*)"
+    ]
+  },
   "statusLine": {
     "type": "command",
-    "command": "/PATH/TO/claudetools/statusline/statusline.sh"
+    "command": "$HOME/.claude/statusline/statusline.sh"
   },
   "hooks": {
     "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/YOUR_USERNAME/.claude/hooks/pending-hook.sh"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/YOUR_USERNAME/.claude/hooks/send-hook.sh"
-          }
-        ]
-      }
+      { "hooks": [{ "type": "command", "command": "$HOME/.claude/hooks/cc-hook.sh" }] },
+      { "hooks": [{ "type": "command", "command": "$HOME/.claude/hooks/pending-hook.sh" }] },
+      { "hooks": [{ "type": "command", "command": "$HOME/.claude/hooks/send-hook.sh" }] },
+      { "hooks": [{ "type": "command", "command": "$HOME/.claude/hooks/queue-hook.sh" }] },
+      { "hooks": [{ "type": "command", "command": "$HOME/.claude/hooks/sendqueue-hook.sh" }] }
     ]
   }
 }
 ```
 
-**Important:** Replace `/PATH/TO/` and `YOUR_USERNAME` with your actual paths.
-
-**Note:** After modifying `settings.json`, you must restart Claude Code for hooks to take effect. Claude Code caches settings at startup.
+**Then restart Claude Code** (settings are cached at startup).
 
 ---
 
-## Components
+## Commands
 
-### 1. Pending/Send Hooks
+All commands use `$` prefix (not `/`) to work via hooks.
 
-Queue prompts in one session, execute them in another.
+### Checkpoints
 
-#### Usage
+Save and restore conversation context across sessions.
+
+| Command | Description |
+|---------|-------------|
+| `$cc <name>` | Save checkpoint |
+| `$cc-resume <name>` | Resume from checkpoint (injects full context) |
+| `$cc-list` | List all checkpoints |
 
 ```
-$pending <name> <prompt>    # Save a prompt for later
-$send <name>                # Execute the saved prompt
+# Save before context gets full
+$cc auth-refactor
+
+# Later, in a new session
+$cc-resume auth-refactor
 ```
 
-#### Example
+**Storage:** `~/.claude/checkpoints/`
+
+### Pending Prompts
+
+Save a prompt now, execute it later.
+
+| Command | Description |
+|---------|-------------|
+| `$pending <name> <prompt>` | Save prompt for later |
+| `$send <name>` | Execute saved prompt |
 
 ```
-# Session A: Save a prompt
-$pending bugfix Fix the authentication timeout issue in auth.js
+# Save a prompt
+$pending bugfix Fix the timeout issue in auth.js
 
-# Session B (or later in A): Execute it
+# Execute later (same or different session)
 $send bugfix
 ```
 
-#### Setup
+**Storage:** `~/.claude/pending-prompts/`
 
-1. Copy hooks to `~/.claude/hooks/`:
-```bash
-mkdir -p ~/.claude/hooks
-cp hooks/pending-hook.sh ~/.claude/hooks/
-cp hooks/send-hook.sh ~/.claude/hooks/
-chmod +x ~/.claude/hooks/*.sh
+### Queue
+
+Save multiple prompts in order, execute sequentially.
+
+| Command | Description |
+|---------|-------------|
+| `$queue <name> <prompt>` | Add prompt to queue |
+| `$queue-list` | Show queue contents |
+| `$sendqueue` | Execute next item in queue |
+
+```
+# Queue up tasks
+$queue step1 "First do this"
+$queue step2 "Then do this"
+$queue step3 "Finally do this"
+
+# Execute in order
+$sendqueue  # runs step1
+$sendqueue  # runs step2
+$sendqueue  # runs step3
 ```
 
-2. Add to `~/.claude/settings.json`:
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/YOUR_USERNAME/.claude/hooks/pending-hook.sh"
-          }
-        ]
-      },
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/Users/YOUR_USERNAME/.claude/hooks/send-hook.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-3. Restart all Claude Code instances.
-
-#### How It Works
-
-- `$pending` saves the prompt to `~/.claude/pending-prompts/<name>.txt`
-- `$send` reads the file, deletes it, and injects the content as context for Claude
-- Uses `$` prefix (not `/`) to avoid slash command parsing
-- Prompts persist across sessions via filesystem
-
-See [docs/howthehookworks/implementation.md](docs/howthehookworks/implementation.md) for technical details.
+**Storage:** `~/.claude/queue-order.txt` + `~/.claude/pending-prompts/`
 
 ---
 
-### 2. Checkpoint Commands
+## Statusline
 
-Save and restore conversation context.
-
-#### Usage
+Enhanced status showing model, context, cost, and duration.
 
 ```
-/cc <name>           # Save checkpoint
-/cc-resume <name>    # Resume from checkpoint
-/cc-list             # List all checkpoints
+[Opus 4.5] 🟢 42% (84K/200K) | 📁 main | 💰 $1.47 | ⏱️ 23m
 ```
 
-#### Example
+| Component | Description |
+|-----------|-------------|
+| `[Opus 4.5]` | Current model |
+| `🟢 42%` | Context usage (🟢 <60%, 🟡 60-80%, 🔴 >80%) |
+| `(84K/200K)` | Token count |
+| `📁 main` | Git branch |
+| `💰 $1.47` | Cumulative session cost |
+| `⏱️ 23m` | Session duration |
 
-```
-# Save before context gets too full
-/cc auth-refactor
+**Pricing (per 1M tokens):**
+- Opus 4.5: $5 in / $25 out
+- Sonnet 4: $3 in / $15 out
+- Haiku: $0.25 in / $1.25 out
 
-# Later, in a new session
-/cc-resume auth-refactor
-```
-
-#### Setup
-
-1. Copy commands to `~/.claude/commands/`:
+**Reset cost tracking:**
 ```bash
-mkdir -p ~/.claude/commands
-cp commands/cc.md ~/.claude/commands/
-cp commands/cc-resume.md ~/.claude/commands/
-cp commands/cc-list.md ~/.claude/commands/
-cp commands/cc-fast.sh ~/.claude/commands/
-chmod +x ~/.claude/commands/cc-fast.sh
+rm ~/.claude/cost-tally.json
 ```
-
-2. **IMPORTANT:** Add bash permission for the script. Without this, you'll get a "permission check failed" error.
-
-   In `~/.claude/settings.json`, add a `permissions` section (or merge with existing):
-   ```json
-   {
-     "permissions": {
-       "allow": [
-         "Bash(\"$HOME/.claude/commands/cc-fast.sh\":*)"
-       ]
-     }
-   }
-   ```
-
-   **Full example** combining with other settings:
-   ```json
-   {
-     "permissions": {
-       "allow": [
-         "Bash(\"$HOME/.claude/commands/cc-fast.sh\":*)"
-       ]
-     },
-     "statusLine": {
-       "type": "command",
-       "command": "/PATH/TO/claudetools/statusline/statusline.sh"
-     },
-     "hooks": { ... }
-   }
-   ```
-
-3. Restart Claude Code (required - settings are cached at startup).
-
-#### How It Works
-
-`/cc` does two things:
-1. **Fast backup (instant)**: Copies the raw session `.jsonl` file
-2. **Summary (takes a moment)**: Claude writes a human-readable summary
-
-Creates:
-- `~/.claude/checkpoints/<name>.jsonl` - Complete raw conversation data
-- `~/.claude/checkpoints/<name>.md` - Human-readable summary
-- `~/.claude/checkpoints/<name>.meta.json` - Metadata
-
-**Best practice**: Checkpoint before hitting ~60% context usage.
-
----
-
-### 3. Statusline
-
-Enhanced status line showing model, context usage, cost, and more.
-
-#### Example Output
-
-```
-[Opus] 🟢 42% (84K/200K) | 📁 main | 💰 $3.47 | ⏱️ 23m
-```
-
-Shows:
-- **Model name** (Opus, Sonnet, Haiku)
-- **Context usage** with color indicator (🟢 <60%, 🟡 60-80%, 🔴 >80%)
-- **Token counts** (e.g., 84K/200K)
-- **Git branch**
-- **Would-be API cost**
-- **Session duration**
-
-#### Setup
-
-1. Add to `~/.claude/settings.json`:
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "/FULL/PATH/TO/claudetools/statusline/statusline.sh"
-  }
-}
-```
-
-2. Restart Claude Code.
 
 ---
 
@@ -247,86 +163,77 @@ Shows:
 ```
 claudetools/
 ├── README.md
-├── statusline/
-│   └── statusline.sh           # Status line script
-├── commands/
-│   ├── cc.md                   # Create checkpoint
-│   ├── cc-resume.md            # Resume checkpoint
-│   ├── cc-list.md              # List checkpoints
-│   └── cc-fast.sh              # Fast backup helper
+├── install.sh              # Installation script
+├── settings.example.json   # Example settings
 ├── hooks/
-│   ├── pending-hook.sh         # $pending command hook
-│   └── send-hook.sh            # $send command hook
+│   ├── cc-hook.sh          # $cc, $cc-resume, $cc-list
+│   ├── pending-hook.sh     # $pending
+│   ├── send-hook.sh        # $send
+│   ├── queue-hook.sh       # $queue, $queue-list
+│   └── sendqueue-hook.sh   # $sendqueue
+├── commands/
+│   └── cc-fast.sh          # Checkpoint helper script
+├── statusline/
+│   └── statusline.sh       # Status line script
 └── docs/
-    └── howthehookworks/
-        └── implementation.md   # Technical documentation
+    ├── howthehookworks/
+    │   └── implementation.md
+    └── statusline/
+        └── design.md
 ```
+
+---
+
+## How Hooks Work
+
+Hooks intercept prompts BEFORE they reach Claude:
+
+1. User types `$cc mywork`
+2. `UserPromptSubmit` hook fires
+3. `cc-hook.sh` receives the prompt as JSON
+4. Script checks if prompt matches `$cc` pattern
+5. If match: saves checkpoint, returns `{"decision":"block",...}`
+6. Claude never sees the prompt - user sees confirmation message
+
+For commands like `$send` and `$cc-resume`, the hook returns `additionalContext` which injects content into Claude's context.
+
+See [docs/howthehookworks/implementation.md](docs/howthehookworks/implementation.md) for technical details.
 
 ---
 
 ## Troubleshooting
 
-### `/cc` gives "Bash command permission check failed"
+### Commands not working
 
-This is the most common issue. The `/cc` command needs explicit bash permission to run the helper script.
+1. **Restart Claude Code** - hooks are cached at startup
+2. Check settings loaded: `grep "hook" ~/.claude/debug/latest`
+3. Validate JSON: `cat ~/.claude/settings.json | jq .`
 
-**Fix:** Add the permission to `~/.claude/settings.json`:
+### "Permission check failed" for $cc
+
+Add to settings.json:
 ```json
 {
   "permissions": {
-    "allow": [
-      "Bash(\"$HOME/.claude/commands/cc-fast.sh\":*)"
-    ]
+    "allow": ["Bash(\"$HOME/.claude/commands/cc-fast.sh\":*)"]
   }
 }
 ```
 
-Then **restart Claude Code** (required).
+### Hook output errors
 
-**Verify the permission is set:**
+Test hook manually:
 ```bash
-cat ~/.claude/settings.json | jq '.permissions'
+echo '{"prompt":"$cc-list"}' | ~/.claude/hooks/cc-hook.sh
 ```
 
-### Hooks not working
-
-1. **Check settings loaded:**
-```bash
-grep "hook" ~/.claude/debug/latest
-```
-Should show `Found 2 hook matchers in settings`.
-
-2. **Restart Claude Code** - hooks are cached at startup.
-
-3. **Check JSON validity:**
-```bash
-cat ~/.claude/settings.json | jq .
-```
-
-### "Interrupted - What should Claude do instead?"
-
-The hook failed. Check debug logs:
-```bash
-grep -i "error\|fail" ~/.claude/debug/latest
-```
-
-Common cause: Invalid JSON in hook output (special characters in saved prompts).
-
-### Commands not found
-
-Ensure files are in `~/.claude/commands/` and Claude Code was restarted.
-
-### cc-fast.sh permission denied
-
-If you see "permission denied" when running the script directly:
-```bash
-chmod +x ~/.claude/commands/cc-fast.sh
-```
+Should return valid JSON.
 
 ---
 
 ## Notes
 
-- **Global vs Project settings**: Hooks in `~/.claude/settings.json` apply globally. You can also add them to project-level `.claude/settings.json`.
-- **Hot reload**: Claude Code does NOT hot-reload settings. Always restart after changes.
-- **Hook execution**: All `UserPromptSubmit` hooks run on every prompt. Each hook checks if the prompt matches its pattern.
+- **Settings location:** `~/.claude/settings.json` (global) or `.claude/settings.json` (project)
+- **Hot reload:** As of v1.0.90+, settings.json changes auto-reload. Hook script changes always take effect immediately.
+- **Dependencies:** `jq` and `bc` required for hooks and statusline
+- **Cross-platform:** Works on macOS and Linux (auto-detects OS for platform-specific commands)

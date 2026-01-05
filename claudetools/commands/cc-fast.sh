@@ -3,6 +3,21 @@
 # Usage: cc-fast.sh <checkpoint-name> [project-path]
 #
 # This finds the most recently modified session file and copies it.
+# Cross-platform: works on macOS and Linux
+
+# Cross-platform file size function
+get_file_size() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        stat -f%z "$1"
+    else
+        stat -c%s "$1"
+    fi
+}
+
+# Cross-platform ISO date (fallback for older systems)
+get_iso_date() {
+    date -Iseconds 2>/dev/null || date +"%Y-%m-%dT%H:%M:%S%z"
+}
 
 CHECKPOINT_NAME="$1"
 PROJECT_PATH="${2:-$(pwd)}"
@@ -42,10 +57,10 @@ cp "$LATEST_SESSION" "$CHECKPOINT_FILE"
 cat > "$CHECKPOINT_DIR/${CHECKPOINT_NAME}.meta.json" << EOF
 {
     "name": "$CHECKPOINT_NAME",
-    "created": "$(date -Iseconds)",
+    "created": "$(get_iso_date)",
     "source_session": "$(basename "$LATEST_SESSION")",
     "project_path": "$PROJECT_PATH",
-    "size_bytes": $(stat -f%z "$CHECKPOINT_FILE")
+    "size_bytes": $(get_file_size "$CHECKPOINT_FILE")
 }
 EOF
 
