@@ -101,8 +101,8 @@ percent = current_tokens * 100 / context_window_size
 
 | Model | Input | Output |
 |-------|-------|--------|
-| Opus | $15 | $75 |
-| Sonnet | $3 | $15 |
+| Opus 4.5 | $5 | $25 |
+| Sonnet 4 | $3 | $15 |
 | Haiku | $0.25 | $1.25 |
 
 ### Tracking Logic
