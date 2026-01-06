@@ -182,7 +182,8 @@
         if (color) info.color = color;
 
         // Typography
-        info.font = cs.fontSize + ' ' + cs.fontFamily.split(',')[0].replace(/['"]/g, '');
+        var fontFamily = cs.fontFamily || '';
+        info.font = cs.fontSize + ' ' + (typeof fontFamily === 'string' ? fontFamily.split(',')[0].replace(/['"]/g, '') : '');
         if (cs.fontWeight !== '400' && cs.fontWeight !== 'normal') {
             info.fontWeight = cs.fontWeight;
         }
@@ -353,9 +354,10 @@
         if (el.title) info.title = el.title;
         if (el.alt) info.alt = el.alt;
 
-        // Links
-        if (el.href) {
-            var href = el.href;
+        // Links - href can be SVGAnimatedString on SVG <a> elements
+        var rawHref = el.href;
+        var href = (rawHref && typeof rawHref === 'string') ? rawHref : (rawHref && rawHref.baseVal) ? rawHref.baseVal : '';
+        if (href) {
             // Sanitize - remove query params for privacy
             try {
                 var url = new URL(href);
@@ -692,17 +694,20 @@
     // ========================================
     function getPredictedAction(el) {
         var tag = el.tagName.toLowerCase();
-        var type = el.type ? el.type.toLowerCase() : '';
+        var rawType = el.type;
+        var type = (rawType && typeof rawType === 'string') ? rawType.toLowerCase() : '';
         var role = el.getAttribute('role');
-        
+
         // Form submissions
-        if (tag === 'button' && el.type === 'submit') return 'submit-form';
+        if (tag === 'button' && type === 'submit') return 'submit-form';
         if (tag === 'input' && type === 'submit') return 'submit-form';
         if (tag === 'form') return 'container-form';
-        
-        // Navigation
-        if (tag === 'a' && el.href) {
-            if (el.href.includes('#')) return 'scroll-to-anchor';
+
+        // Navigation - href can be SVGAnimatedString on SVG <a> elements
+        var href = el.href;
+        var hrefStr = (href && typeof href === 'string') ? href : (href && href.baseVal) ? href.baseVal : '';
+        if (tag === 'a' && hrefStr) {
+            if (hrefStr.includes('#')) return 'scroll-to-anchor';
             if (el.target === '_blank') return 'open-new-tab';
             return 'navigate';
         }
@@ -757,7 +762,7 @@
         
         // Check for loading indicators
         var loadingPatterns = ['loading', 'spinner', 'skeleton', 'shimmer', 'pending'];
-        var className = el.className || '';
+        var className = (el.className && typeof el.className === 'string') ? el.className : '';
         var ariaLabel = el.getAttribute('aria-label') || '';
         var ariaBusy = el.getAttribute('aria-busy');
         
