@@ -124,12 +124,18 @@ if [[ "$prompt" =~ ^\$cc-resume[[:space:]] ]]; then
     else
         # No summary - inject the raw checkpoint data
         context+="## Raw Checkpoint Data\n\n"
-        context+="Below is the raw conversation data from this checkpoint (JSONL format). Parse it to understand the conversation history, then summarize what was being worked on and ask how to proceed.\n\n"
+        context+="Below is the MOST RECENT conversation data from this checkpoint (JSONL format, newest first). Parse it to understand what was being worked on and ask how to proceed.\n\n"
         context+="---\n\n"
 
         # Read raw jsonl - filter to just user/assistant messages
-        # Use tac to reverse order so most recent context comes first (most relevant for resuming)
-        raw_data=$(tac "$jsonl_file" | grep -E '"type":"(user|assistant)"')
+        # Reverse order so most recent context comes first (most relevant for resuming)
+        # Limit to ~100KB to avoid overwhelming context (keeps most recent work)
+        # Use tail -r on macOS, tac on Linux
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            raw_data=$(tail -r "$jsonl_file" | grep -E '"type":"(user|assistant)"' | head -c 100000)
+        else
+            raw_data=$(tac "$jsonl_file" | grep -E '"type":"(user|assistant)"' | head -c 100000)
+        fi
 
         # Combine and escape for JSON
         full_context="${context}${raw_data}"
