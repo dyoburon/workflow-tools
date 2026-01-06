@@ -5,8 +5,10 @@ A Hammerspoon tool that extracts rich DOM context optimized for LLM/AI agent con
 ## Features
 
 - **Universal browser support** - Chrome, Safari, Arc, Edge (AppleScript), Firefox (bookmarklet)
+- **Full Safari/IE11 compatibility** - ES5 syntax, SVGAnimatedString handling, polyfills included
 - **Zero truncation** - All text, all elements, no "... and X more"
-- **Agentic context** - Form, table, list, modal, landmark detection for AI understanding
+- **Agentic context** - 12 specialized extraction functions for AI agent automation
+- **Error resilient** - All 32 extractors wrapped in try-catch (handles React/Vue/Next.js edge cases)
 - **Predicted actions** - Tells AI what clicking/interacting would likely do
 - **No extensions required** - Pure AppleScript + JavaScript injection
 - **Privacy-focused** - No network, no cookies, no sensitive data extraction
@@ -57,7 +59,7 @@ Now `Cmd+Shift+M` will automatically find and click this bookmarklet.
 +-----------------------------------------------------------------
 | DOM EXTRACT
 | url: https://example.com/checkout
-| viewport: 1440x900  scroll: 0,250
+| viewport: 1728x959  scroll: 0,0
 +-----------------------------------------------------------------
 | SELECTION
 | region: middle-center
@@ -70,51 +72,66 @@ Now `Cmd+Shift+M` will automatically find and click this bookmarklet.
 | selector: #submit-order
 |--- position
 |    viewport: 651,469 (138x48)
-|    in-parent: 75.2%, 80.0% of form#checkout-form
 |--- visual
 |    background: rgb(37, 99, 235)
 |    color: rgb(255, 255, 255)
 |    font: 16px Inter
-|    fontWeight: 600
-|    cursor: pointer
 |--- design
 |    borderRadius: 8px
-|    padding: 12px 24px
-|    shadow: yes
 |    animated: yes
 |--- semantic
 |    role: button
 |    ariaLabel: Place your order
-|--- state
-|    disabled: false
 |--- interactive: native-button, focusable, pointer
 |--- form
 |    inForm: true
 |    formId: checkout-form
 |    formAction: /api/orders
 |    formMethod: POST
-|    formFields: 8
-|    submitButton: button#submit-order
-|--- landmark
-|    landmark: main
-|--- siblings
-|    siblingIndex: 2
-|    totalSiblings: 2
-|    prevSibling: button.btn-secondary
-|    prevText: Back to Cart
 |--- hierarchy: div.actions < form#checkout-form < main < div.container
 |--- action: submit-form
 |--- viewport
 |    visibility: fully-visible
-+-----------------------------------------------------------------
-| NEARBY (5)
-| 1. span.price "$149.99"
-| 2. div.order-summary "Order Summary" [interactive]
-| 3. input#card-number [interactive]
-| 4. label "Card Number"
-| 5. form#checkout-form [interactive]
+|
+| AUTOMATION CONTEXT
+|--- behavior (on activation)
+|    outcome: form-submit
+|    target: /api/orders
+|    method: POST
+|    isAjax: true
+|--- input-method
+|    clickable: true
+|    clickMethod: left-click
+|    keyboard: Enter or Space
+|--- dependencies
+|    form: #checkout-form
+|--- constraints
+|    required: true
+|--- timing
+|    hasTransition: true
+|--- shortcuts
+|    implicit: Enter (when form focused)
 +-----------------------------------------------------------------
 ```
+
+## Automation Context (Agentic Features)
+
+12 specialized extraction functions designed for AI agent automation:
+
+| Section | Purpose | Example Output |
+|---------|---------|----------------|
+| `behavior` | What happens on activation | `outcome: form-submit`, `willNavigate: true` |
+| `input-method` | How to interact | `clickMethod: left-click`, `keyboard: Enter or Space` |
+| `dependencies` | Connected elements | `form: #checkout-form`, `toggleTarget: #menu` |
+| `constraints` | Input requirements | `required: true`, `pattern: [0-9]{3}-[0-9]{4}` |
+| `step-context` | Multi-step flow position | `currentStep: 2`, `totalSteps: 4` |
+| `data-binding` | Framework bindings | `vModel: email`, `reactState: formData` |
+| `timing` | Transitions/animations | `hasTransition: true`, `debounce: 300ms` |
+| `error-state` | Validation errors | `hasError: true`, `message: Invalid email` |
+| `permissions` | Browser permissions needed | `requires: camera, microphone` |
+| `async` | Loading/pagination state | `isLoading: true`, `hasInfiniteScroll: true` |
+| `shortcuts` | Keyboard shortcuts | `accessKey: s`, `implicit: Enter` |
+| `content` | Media type/format | `mediaType: video`, `editable: true` |
 
 ## Extracted Data
 
@@ -324,8 +341,8 @@ Shows up to 5 parent elements: `div.card < section#main < main < body`
 | File | Purpose |
 |------|---------|
 | `init.lua` | Hammerspoon hotkey binding, browser detection, Firefox bookmarklet auto-click |
-| `dom-extractor.js` | Full source JavaScript (readable, ~42KB) |
-| `dom-extractor.min.js` | Minified JavaScript (used by init.lua, ~17KB) |
+| `dom-extractor.js` | Full source JavaScript (readable, ~97KB) |
+| `dom-extractor.min.js` | Minified JavaScript (used by init.lua, ~35KB) |
 | `bookmarklet.js` | Ready-to-copy bookmarklet with `javascript:` prefix |
 
 ## How It Works
@@ -341,6 +358,17 @@ Firefox blocks AppleScript JavaScript injection (security feature). Instead:
 1. Hammerspoon uses System Events to open the Bookmarks menu
 2. Searches for bookmark named exactly "Dom Extractor"
 3. Clicks it to execute the bookmarklet
+
+## Error Resilience
+
+All 32 extraction functions are wrapped in try-catch to handle:
+- Next.js hydration elements
+- React fiber nodes  
+- Vue reactive proxies
+- Shadow DOM elements
+- Cross-origin iframes
+- Elements removed during extraction
+- Malformed DOM structures
 
 ## Troubleshooting
 
