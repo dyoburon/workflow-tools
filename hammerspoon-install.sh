@@ -1,6 +1,6 @@
 #!/bin/bash
 # Hammerspoon Tools Installer
-# Installs: force-alt-tab + window-recorder
+# Installs: force-alt-tab + window-recorder + dom-for-llm-extractor
 # macOS only
 
 set -e
@@ -33,6 +33,7 @@ fi
 echo "This will install:"
 echo "  - force-alt-tab: Makes Cmd+Tab always unhide apps"
 echo "  - window-recorder: Record & replay window positions"
+echo "  - dom-for-llm-extractor: Page measure tool for DOM context"
 echo ""
 
 # Check for existing config
@@ -84,6 +85,37 @@ generate_config() {
     echo "-- =================================================="
     echo ""
     cat "$SCRIPT_DIR/window-recorder/init.lua"
+    echo ""
+    echo ""
+    echo "-- =================================================="
+    echo "-- Page Measure (DOM for LLM Extractor)"
+    echo "-- Cmd+Shift+M to measure and capture DOM context"
+    echo "-- =================================================="
+    echo ""
+    echo "local pageMeasureJS = [["
+    cat "$SCRIPT_DIR/dom-for-llm-extractor/page-measure-enhanced-fixed.min.js"
+    echo "]]"
+    echo ""
+    echo 'hs.hotkey.bind({"cmd", "shift"}, "M", function()'
+    echo '    local app = hs.application.frontmostApplication()'
+    echo '    local appName = app:name()'
+    echo ''
+    echo '    local escapedJS = pageMeasureJS:gsub('\''\\\\'\'',' '\''\\\\\\\\'\'')'
+    echo '    escapedJS = escapedJS:gsub('\''"'\'', '\''\\\\\"'\'')'
+    echo ''
+    echo '    if appName == "Google Chrome" or appName == "Google Chrome Canary" then'
+    echo '        local script = '\''tell application "Google Chrome" to execute front window\\'\''s active tab javascript "'\'' .. escapedJS .. '\''"'\'''
+    echo '        hs.osascript.applescript(script)'
+    echo '    elseif appName == "Safari" then'
+    echo '        local script = '\''tell application "Safari" to do JavaScript "'\'' .. escapedJS .. '\''" in front document'\'''
+    echo '        hs.osascript.applescript(script)'
+    echo '    elseif appName == "Arc" then'
+    echo '        local script = '\''tell application "Arc" to execute front window\\'\''s active tab javascript "'\'' .. escapedJS .. '\''"'\'''
+    echo '        hs.osascript.applescript(script)'
+    echo '    else'
+    echo '        hs.alert.show("Page Measure: Not in a supported browser")'
+    echo '    end'
+    echo 'end)'
 }
 
 if [ "$MODE" = "replace" ]; then
@@ -104,4 +136,5 @@ echo "Usage:"
 echo "  - Cmd+Tab now always unhides apps"
 echo "  - Cmd+Option+R to record window position"
 echo "  - Cmd+Option+2-9 to restore positions"
+echo "  - Cmd+Shift+M to measure page elements (in browser)"
 echo ""
