@@ -1,27 +1,38 @@
--- DOM for LLM Extractor - Universal Browser Support
--- Cmd+Shift+M to activate in any browser
+-- DOM for LLM Extractor
+-- Hotkey: Cmd+Shift+M
+-- Drag a rectangle in browser to extract DOM info for LLM consumption
 --
 -- Supports:
--- - Chrome, Safari, Arc, Edge: Direct AppleScript injection
--- - Firefox: Bookmarklet click (requires one-time bookmarklet setup)
+-- - Chrome, Safari, Arc, Edge: Direct AppleScript JS injection
+-- - Firefox: Auto-clicks bookmarklet via System Events (requires bookmarklet named "DOM Extractor")
 
 local scriptDir = debug.getinfo(1, "S").source:match("@(.*/)")
-local jsFile = io.open(scriptDir .. "page-measure-enhanced-fixed.min.js", "r")
+
+-- Load minified JS
+local jsFile = io.open(scriptDir .. "dom-extractor.min.js", "r")
 if not jsFile then
-    hs.alert.show("Error: Could not find page-measure-enhanced-fixed.min.js")
+    hs.alert.show("DOM Extractor: Could not load dom-extractor.min.js")
     return
 end
-local pageMeasureJS = jsFile:read("*all")
+local domExtractorJS = jsFile:read("*all")
 jsFile:close()
 
--- Firefox: Find and click DOM Extractor bookmarklet in any location
+-- Escape JS for AppleScript embedding
+local function escapeForAppleScript(js)
+    return js:gsub('\\', '\\\\'):gsub('"', '\\"'):gsub('\n', '\\n')
+end
+
+local escapedJS = escapeForAppleScript(domExtractorJS)
+
+-- Firefox: Find and click DOM Extractor bookmarklet via System Events
 local function executeInFirefox()
     local script = [[
         tell application "Firefox" to activate
         delay 0.1
         tell application "System Events"
             tell process "Firefox"
-                set searchTerms to {"DOM Extractor", "Dom Extractor", "dom-extractor", "DOMExtractor", "dom extractor"}
+                -- Exact names to match (in priority order)
+                set searchTerms to {"Dom Extractor", "DOM Extractor", "dom-extractor", "DOMExtractor", "dom extractor"}
                 set bookmarksMenu to menu 1 of menu bar item "Bookmarks" of menu bar 1
                 set allMenus to {bookmarksMenu}
                 
@@ -32,13 +43,14 @@ local function executeInFirefox()
                     set end of allMenus to menu 1 of menu item "Other Bookmarks" of bookmarksMenu
                 end try
                 
+                -- First pass: exact match only
                 repeat with currentMenu in allMenus
                     repeat with menuItem in menu items of currentMenu
                         try
                             set itemName to name of menuItem
                             if itemName is not missing value then
                                 repeat with term in searchTerms
-                                    if itemName contains contents of term then
+                                    if itemName is equal to contents of term then
                                         click menuItem
                                         return true
                                     end if
@@ -54,14 +66,13 @@ local function executeInFirefox()
     
     local ok, result = hs.osascript.applescript(script)
     if not ok or result == false then
-        hs.alert.show("Firefox: Bookmarklet not found.\n\nCreate a bookmark named 'DOM Extractor'\nwith the bookmarklet code.")
+        hs.alert.show("Firefox: Bookmarklet not found.\n\nCreate bookmark named exactly:\n'Dom Extractor'")
     end
 end
 
 hs.hotkey.bind({"cmd", "shift"}, "M", function()
     local app = hs.application.frontmostApplication()
     local appName = app:name()
-    local escapedJS = pageMeasureJS:gsub('\\', '\\\\'):gsub('"', '\\"')
 
     if appName == "Google Chrome" or appName == "Google Chrome Canary" then
         hs.osascript.applescript('tell application "' .. appName .. '" to execute front window\'s active tab javascript "' .. escapedJS .. '"')
@@ -71,9 +82,9 @@ hs.hotkey.bind({"cmd", "shift"}, "M", function()
         hs.osascript.applescript('tell application "Arc" to execute front window\'s active tab javascript "' .. escapedJS .. '"')
     elseif appName == "Microsoft Edge" then
         hs.osascript.applescript('tell application "Microsoft Edge" to execute front window\'s active tab javascript "' .. escapedJS .. '"')
-    elseif appName == "Firefox" then
+    elseif appName == "Firefox" or appName == "Firefox Developer Edition" then
         executeInFirefox()
     else
-        hs.alert.show("DOM Extractor: Unsupported browser\n\nSupported: Chrome, Safari, Arc, Edge, Firefox")
+        hs.alert.show("DOM Extractor: Unsupported browser\n" .. appName)
     end
 end)
