@@ -57,11 +57,23 @@ if [[ "$prompt" =~ ^\$cc[[:space:]] ]]; then
 
     # Run the checkpoint script
     output=$("$HOME/.claude/commands/cc-fast.sh" "$name" "$(pwd)" 2>&1)
+    exit_code=$?
+    # Escape newlines for JSON
+    output_escaped=$(echo "$output" | tr '\n' ' ' | sed 's/  */ /g')
 
-    if [ $? -eq 0 ]; then
-        echo "{\"decision\":\"block\",\"reason\":\"$output\\n\\nResume with: \$cc-resume $name\"}"
+    if [ $exit_code -eq 0 ]; then
+        reason="${output_escaped}
+
+Resume with: \$cc-resume $name
+
+Files saved to: ~/.claude/checkpoints/
+  - ${name}.jsonl (conversation data)
+  - ${name}.meta.json (metadata)"
+        # Use jq to properly escape for JSON
+        escaped_reason=$(echo "$reason" | jq -Rs '.')
+        echo "{\"decision\":\"block\",\"reason\":$escaped_reason}"
     else
-        echo "{\"decision\":\"block\",\"reason\":\"Error creating checkpoint:\\n$output\"}"
+        echo "{\"decision\":\"block\",\"reason\":\"Error creating checkpoint: $output_escaped\"}"
     fi
     exit 0
 fi
@@ -103,40 +115,24 @@ if [[ "$prompt" =~ ^\$cc-resume[[:space:]] ]]; then
         context+="**Created:** $created\n**Project:** $project\n\n"
     fi
 
-    # If summary exists, use it; otherwise inject full checkpoint
+    # If summary exists, use it; otherwise inject raw checkpoint
     if [ -f "$summary_file" ]; then
         summary_content=$(cat "$summary_file")
         context+="## Checkpoint Summary\n\n$summary_content\n\n"
         context+="---\n\n**Instructions:** Review this checkpoint summary and ask the user how they'd like to proceed."
         escaped_context=$(echo -e "$context" | jq -Rs '.')
     else
-        # No summary - inject the full checkpoint conversation
-        context+="## Full Conversation History\n\n"
-        context+="Below is the complete conversation from this checkpoint. Review it and ask the user how they'd like to proceed.\n\n"
+        # No summary - inject the raw checkpoint data
+        context+="## Raw Checkpoint Data\n\n"
+        context+="Below is the raw conversation data from this checkpoint (JSONL format). Parse it to understand the conversation history, then summarize what was being worked on and ask how to proceed.\n\n"
         context+="---\n\n"
 
-        # Read jsonl and format as readable conversation
-        conversation=$(cat "$jsonl_file" | jq -r '
-            select(.type == "user" or .type == "assistant") |
-            if .type == "user" then
-                "**User:** " + (
-                    if .message.content | type == "string" then .message.content
-                    elif .message.content | type == "array" then (.message.content | map(select(.type == "text") | .text) | join(" "))
-                    else "[no message]"
-                    end
-                )
-            elif .type == "assistant" then
-                "**Assistant:** " + (
-                    if .message.content | type == "string" then .message.content
-                    elif .message.content | type == "array" then (.message.content | map(select(.type == "text") | .text) | join(" "))
-                    else "[no message]"
-                    end
-                )
-            else empty end
-        ' 2>/dev/null)
+        # Read raw jsonl - filter to just user/assistant messages
+        # Use tac to reverse order so most recent context comes first (most relevant for resuming)
+        raw_data=$(tac "$jsonl_file" | grep -E '"type":"(user|assistant)"')
 
         # Combine and escape for JSON
-        full_context="${context}${conversation}"
+        full_context="${context}${raw_data}"
         escaped_context=$(echo "$full_context" | jq -Rs '.')
     fi
 
