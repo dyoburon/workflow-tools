@@ -1,15 +1,33 @@
 # DOM for LLM Extractor
 
-A Hammerspoon tool that extracts rich DOM context optimized for LLM/AI agent consumption. Press `Cmd+Shift+M` in any browser, drag to select elements, and get comprehensive element data copied to clipboard instantly.
+A Hammerspoon tool that extracts rich DOM context optimized for LLM/AI agent consumption. Two modes available:
+
+- **Drag Mode** (`Cmd+Shift+M`) - Drag a rectangle to extract multiple elements
+- **Precision Mode** (`Cmd+Shift+K`) - Hover to inspect, click to capture single element with enhanced detail
+
+![Precision Inspector Demo](../assets/precision-inspector-demo.gif)
 
 ## Features
 
 - **Universal browser support** - Chrome, Safari, Arc, Edge (AppleScript), Firefox (bookmarklet)
+- **Full Safari/IE11 compatibility** - ES5 syntax, SVGAnimatedString handling, polyfills included
 - **Zero truncation** - All text, all elements, no "... and X more"
-- **Agentic context** - Form, table, list, modal, landmark detection for AI understanding
+- **Agentic context** - 12 specialized extraction functions for AI agent automation
+- **Error resilient** - All extractors wrapped in try-catch (handles React/Vue/Next.js edge cases)
 - **Predicted actions** - Tells AI what clicking/interacting would likely do
+- **Destination detection** - Shows WHERE links/buttons navigate to, not just "navigate"
 - **No extensions required** - Pure AppleScript + JavaScript injection
 - **Privacy-focused** - No network, no cookies, no sensitive data extraction
+- **Network context** (Precision Mode) - Captures fetch/XHR requests since activation
+- **Security hardened** - Input sanitization, length limits, ReDoS prevention
+
+## Keybindings
+
+| Hotkey | Mode | Description |
+|--------|------|-------------|
+| `Cmd+Shift+M` | Drag Mode | Drag a rectangle to extract multiple elements |
+| `Cmd+Shift+K` | Precision Mode | Hover to inspect, click to capture single element |
+| `Escape` | Both | Cancel/exit the current mode |
 
 ## Browser Support
 
@@ -32,32 +50,206 @@ A Hammerspoon tool that extracts rich DOM context optimized for LLM/AI agent con
 
 ### Firefox Setup (One-Time)
 
-Firefox blocks AppleScript JavaScript injection for security. The tool auto-clicks a bookmarklet instead.
+Firefox blocks AppleScript JavaScript injection for security. The tool auto-clicks bookmarklets instead.
 
-1. Open Firefox
-2. Create a new bookmark (Cmd+D or right-click bookmarks bar)
-3. Set:
-   - **Name:** `Dom Extractor` (exact name required)
-   - **URL:** Paste entire contents of `bookmarklet.js`
-4. Save
+**For Drag Mode (`Cmd+Shift+M`):**
+1. Create a new bookmark named exactly: `Dom Extractor`
+2. Set URL to contents of `bookmarklet.js`
 
-Now `Cmd+Shift+M` will automatically find and click this bookmarklet.
+**For Precision Mode (`Cmd+Shift+K`):**
+1. Create a new bookmark named exactly: `Precision Inspector`
+2. Set URL to contents of `bookmarklet-precision.js`
+
+Both bookmarklets must be in: Bookmarks Menu, Bookmarks Toolbar, or Other Bookmarks (not nested folders).
 
 ## Usage
 
+### Drag Mode (`Cmd+Shift+M`)
 1. Focus any supported browser
 2. Press `Cmd+Shift+M`
 3. Drag a rectangle around the element(s) you want to extract
 4. Release mouse - data is copied to clipboard instantly
 5. Press `Escape` to cancel
 
-## Output Format
+### Precision Mode (`Cmd+Shift+K`)
+1. Focus any supported browser
+2. Press `Cmd+Shift+K`
+3. Hover over elements - see real-time highlighting and info
+4. Click to capture the hovered element
+5. Press `Escape` to cancel
+
+---
+
+## Precision Mode - Detailed Breakdown
+
+Precision Mode provides a rich, interactive inspection experience with real-time feedback and comprehensive element analysis.
+
+### Visual Feedback
+
+| Component | Description |
+|-----------|-------------|
+| **Highlight Box** | Blue border with semi-transparent overlay on hovered element |
+| **Floating Label** | Shows selector, dimensions, predicted action, and destination |
+| **Status Bar** | Top-center bar showing current element info and instructions |
+| **Toast Notifications** | Animated slide-in notifications for capture success/failure |
+| **Green Flash** | Visual confirmation when element is captured |
+
+### Real-Time Information Display
+
+The floating label shows:
+```
+button#submit.btn.primary
+138×48 → /api/checkout [POST]
+"Place Order"
+```
+
+- Line 1: Element selector (tag#id.classes)
+- Line 2: Dimensions + destination (where it goes) or predicted action
+- Line 3: Text content (if any)
+
+### Destination Detection
+
+Precision Mode intelligently detects WHERE interactive elements navigate to:
+
+| Destination Type | Example Display |
+|------------------|-----------------|
+| External link | `↗ github.com/user/repo` |
+| Internal path | `/dashboard/settings` |
+| Anchor scroll | `⚓ #section-2` |
+| Email link | `✉ support@example.com` |
+| Phone link | `☎ +1-555-0123` |
+| Form submission | `/api/submit [POST]` |
+| Router link | `/products/123` |
+
+### Network Interception
+
+Precision Mode captures all network requests made while active:
+
+```
+| NETWORK CONTEXT (3 requests since activation)
+|--- 1. GET /api/user → 200 (45ms)
+|--- 2. POST /api/analytics → 204 (120ms) [from: button#track]
+|--- 3. GET /api/products?page=2 → 200 (89ms)
+```
+
+Features:
+- Intercepts both `fetch()` and `XMLHttpRequest`
+- Records method, URL, status, duration
+- Tracks which element initiated the request
+- Sanitizes URLs (removes sensitive query params)
+- Limited to 100 entries (FIFO eviction)
+
+### Box Model Extraction
+
+```
+| BOX MODEL
+|--- content: 138×48
+|--- padding: 12px 24px 12px 24px
+|--- border: 1px 1px 1px 1px
+|--- margin: 0px 8px 0px 0px
+|--- total: 164×74
+|--- box-sizing: border-box
+```
+
+### CSS Variables Detection
+
+Detects common CSS custom properties from `:root`:
+
+```
+| CSS VARIABLES
+|--- --color-primary: #3b82f6 (from :root)
+|--- --border-radius: 8px (from :root)
+|--- --font-family: Inter, sans-serif (from :root)
+```
+
+### Full DOM Path
+
+```
+| DOM PATH
+| html > body > div#app > main > section.checkout > form#order > button#submit
+| depth: 7
+```
+
+### Precision Mode Output Format
+
+```
++-----------------------------------------------------------------
+| PRECISION EXTRACT
+| url: /checkout
+| viewport: 1728×959  scroll: 0,245
+| mode: precision-hover
+| captured: 2024-01-15T10:30:45.123Z
++-----------------------------------------------------------------
+| SELECTED ELEMENT
+| tag: button#submit-order.btn.btn-primary
+| text: "Place Order"
+| selector: form#checkout > div.actions > button#submit-order
++-----------------------------------------------------------------
+| DOM PATH
+| html > body > div#app > main > form#checkout > div.actions > button#submit-order
+| depth: 7
++-----------------------------------------------------------------
+| BOX MODEL
+|--- content: 138×48
+|--- padding: 12px 24px 12px 24px
+|--- border: 1px 1px 1px 1px
+|--- margin: 0px 0px 0px 0px
+|--- total: 164×74
+|--- box-sizing: border-box
++-----------------------------------------------------------------
+| POSITION
+|--- viewport: 651,469 (164×74)
+|--- page: 651,714
+|--- in-parent: 75.2%, 80.1% of div.actions
++-----------------------------------------------------------------
+| VISUAL
+|--- background: rgb(37, 99, 235)
+|--- color: rgb(255, 255, 255)
+|--- font: 600 16px/24px Inter
+|--- border-radius: 8px
+|--- cursor: pointer
++-----------------------------------------------------------------
+| SEMANTIC
+|--- role: button
+|--- aria-label: Complete your purchase
++-----------------------------------------------------------------
+| INTERACTIVE
+|--- nativeInteractive: true
+|--- focusable: true
+|--- tabindex: 0
+|--- cursorPointer: true
++-----------------------------------------------------------------
+| PREDICTED ACTION
+|--- submit-form
++-----------------------------------------------------------------
+| DESTINATION
+|--- type: form-action
+|--- url: /api/orders
+|--- display: /api/orders [POST]
+|--- method: POST
++-----------------------------------------------------------------
+| FORM CONTEXT
+|--- form-id: checkout-form
+|--- action: /api/orders
+|--- method: POST
++-----------------------------------------------------------------
+| NETWORK CONTEXT (2 requests since activation)
+|--- 1. GET /api/cart → 200 (34ms)
+|--- 2. GET /api/shipping-options → 200 (89ms)
++-----------------------------------------------------------------
+| INSPECTOR ACTIVE: 12.4s
++-----------------------------------------------------------------
+```
+
+---
+
+## Drag Mode Output Format
 
 ```
 +-----------------------------------------------------------------
 | DOM EXTRACT
 | url: https://example.com/checkout
-| viewport: 1440x900  scroll: 0,250
+| viewport: 1728x959  scroll: 0,0
 +-----------------------------------------------------------------
 | SELECTION
 | region: middle-center
@@ -70,59 +262,74 @@ Now `Cmd+Shift+M` will automatically find and click this bookmarklet.
 | selector: #submit-order
 |--- position
 |    viewport: 651,469 (138x48)
-|    in-parent: 75.2%, 80.0% of form#checkout-form
 |--- visual
 |    background: rgb(37, 99, 235)
 |    color: rgb(255, 255, 255)
 |    font: 16px Inter
-|    fontWeight: 600
-|    cursor: pointer
 |--- design
 |    borderRadius: 8px
-|    padding: 12px 24px
-|    shadow: yes
 |    animated: yes
 |--- semantic
 |    role: button
 |    ariaLabel: Place your order
-|--- state
-|    disabled: false
 |--- interactive: native-button, focusable, pointer
 |--- form
 |    inForm: true
 |    formId: checkout-form
 |    formAction: /api/orders
 |    formMethod: POST
-|    formFields: 8
-|    submitButton: button#submit-order
-|--- landmark
-|    landmark: main
-|--- siblings
-|    siblingIndex: 2
-|    totalSiblings: 2
-|    prevSibling: button.btn-secondary
-|    prevText: Back to Cart
 |--- hierarchy: div.actions < form#checkout-form < main < div.container
 |--- action: submit-form
 |--- viewport
 |    visibility: fully-visible
-+-----------------------------------------------------------------
-| NEARBY (5)
-| 1. span.price "$149.99"
-| 2. div.order-summary "Order Summary" [interactive]
-| 3. input#card-number [interactive]
-| 4. label "Card Number"
-| 5. form#checkout-form [interactive]
+|
+| AUTOMATION CONTEXT
+|--- behavior (on activation)
+|    outcome: form-submit
+|    target: /api/orders
+|    method: POST
+|    isAjax: true
+|--- input-method
+|    clickable: true
+|    clickMethod: left-click
+|    keyboard: Enter or Space
+|--- dependencies
+|    form: #checkout-form
+|--- constraints
+|    required: true
+|--- timing
+|    hasTransition: true
+|--- shortcuts
+|    implicit: Enter (when form focused)
 +-----------------------------------------------------------------
 ```
 
-## Extracted Data
+## Automation Context (Agentic Features)
+
+12 specialized extraction functions designed for AI agent automation:
+
+| Section | Purpose | Example Output |
+|---------|---------|----------------|
+| `behavior` | What happens on activation | `outcome: form-submit`, `willNavigate: true` |
+| `input-method` | How to interact | `clickMethod: left-click`, `keyboard: Enter or Space` |
+| `dependencies` | Connected elements | `form: #checkout-form`, `toggleTarget: #menu` |
+| `constraints` | Input requirements | `required: true`, `pattern: [0-9]{3}-[0-9]{4}` |
+| `step-context` | Multi-step flow position | `currentStep: 2`, `totalSteps: 4` |
+| `data-binding` | Framework bindings | `vModel: email`, `reactState: formData` |
+| `timing` | Transitions/animations | `hasTransition: true`, `debounce: 300ms` |
+| `error-state` | Validation errors | `hasError: true`, `message: Invalid email` |
+| `permissions` | Browser permissions needed | `requires: camera, microphone` |
+| `async` | Loading/pagination state | `isLoading: true`, `hasInfiniteScroll: true` |
+| `shortcuts` | Keyboard shortcuts | `accessKey: s`, `implicit: Enter` |
+| `content` | Media type/format | `mediaType: video`, `editable: true` |
+
+## Extracted Data Reference
 
 ### Core Information
 | Field | Description |
 |-------|-------------|
 | `tag` | Element tag with ID and classes |
-| `text` | Full text content (no truncation) |
+| `text` | Full text content (truncated to 200 chars in drag mode, 50 in precision) |
 | `selector` | Unique CSS selector for targeting |
 
 ### Position & Layout
@@ -162,14 +369,14 @@ Now `Cmd+Shift+M` will automatically find and click this bookmarklet.
 | Field | Description |
 |-------|-------------|
 | `role` | ARIA role |
-| `ariaLabel` | aria-label value |
+| `ariaLabel` | aria-label value (sanitized, max 200 chars) |
 | `labelledBy` | Text from aria-labelledby element |
 | `describedBy` | Text from aria-describedby element |
 | `label` | Associated label text (for inputs) |
 | `title` | Title attribute |
 | `alt` | Alt text (for images) |
 | `href` | Link URL (sanitized, no query params) |
-| `data` | Non-sensitive data-* attributes |
+| `data` | Non-sensitive data-* attributes (max 500 chars each) |
 
 ### Interactive State
 | Field | Description |
@@ -321,12 +528,48 @@ Shows up to 5 parent elements: `div.card < section#main < main < body`
 
 ## Files
 
-| File | Purpose |
-|------|---------|
-| `init.lua` | Hammerspoon hotkey binding, browser detection, Firefox bookmarklet auto-click |
-| `dom-extractor.js` | Full source JavaScript (readable, ~42KB) |
-| `dom-extractor.min.js` | Minified JavaScript (used by init.lua, ~17KB) |
-| `bookmarklet.js` | Ready-to-copy bookmarklet with `javascript:` prefix |
+| File | Purpose | Size |
+|------|---------|------|
+| `init.lua` | Hammerspoon hotkey binding, browser detection, Firefox bookmarklet auto-click | 5KB |
+| `dom-extractor.js` | Drag mode source JavaScript | ~98KB |
+| `dom-extractor.min.js` | Drag mode minified | ~35KB |
+| `bookmarklet.js` | Drag mode Firefox bookmarklet | ~35KB |
+| `precision-inspector.js` | Precision mode source JavaScript | ~75KB |
+| `precision-inspector.min.js` | Precision mode minified | ~30KB |
+| `bookmarklet-precision.js` | Precision mode Firefox bookmarklet | ~30KB |
+
+## Security & Privacy
+
+### Data Protection
+- **No network access** - Everything runs locally
+- **No extensions** - No browser permissions required  
+- **No sensitive data** - Excludes: passwords, cookies, localStorage, tokens, auth data
+- **URL sanitization** - Query params with sensitive names are stripped
+- **Clipboard only** - Data goes to clipboard, nowhere else
+- **Open source** - Full source available for audit
+
+### Security Hardening (v2.0)
+
+This version includes comprehensive security improvements:
+
+| Protection | Description |
+|------------|-------------|
+| **Input Length Limits** | Text content limited to 10KB before processing |
+| **Output Truncation** | Text truncated to 200 chars (drag) / 50 chars (precision) |
+| **ReDoS Prevention** | onclick handlers limited to 1000 chars before regex |
+| **Memory Protection** | Network log limited to 100 entries (FIFO eviction) |
+| **Attribute Sanitization** | aria-label limited to 200 chars, control chars stripped |
+| **Data Attribute Limits** | data-* values limited to 500 chars |
+| **Class String Limits** | className limited to 1000 chars before pattern matching |
+| **URL Sanitization** | Sensitive query params removed from all URLs |
+| **Sensitive Data Filtering** | Passwords, tokens, API keys never extracted |
+
+### Sensitive Parameters Filtered
+```
+token, key, secret, auth, password, api_key, apikey, 
+access_token, refresh_token, session, sid, jwt, bearer, 
+credential, private, apiSecret, client_secret
+```
 
 ## How It Works
 
@@ -339,8 +582,20 @@ tell application "Chrome" to execute front window's active tab javascript "..."
 ### Firefox
 Firefox blocks AppleScript JavaScript injection (security feature). Instead:
 1. Hammerspoon uses System Events to open the Bookmarks menu
-2. Searches for bookmark named exactly "Dom Extractor"
+2. Searches for bookmark named exactly "Dom Extractor" or "Precision Inspector"
 3. Clicks it to execute the bookmarklet
+
+## Error Resilience
+
+All 32+ extraction functions are wrapped in try-catch to handle:
+- Next.js hydration elements
+- React fiber nodes  
+- Vue reactive proxies
+- Shadow DOM elements
+- Cross-origin iframes
+- Elements removed during extraction
+- Malformed DOM structures
+- SVGAnimatedString edge cases
 
 ## Troubleshooting
 
@@ -349,7 +604,8 @@ Firefox blocks AppleScript JavaScript injection (security feature). Instead:
 - **Safari:** Settings → Advanced → Show Develop menu, then Develop → Allow JavaScript from Apple Events
 
 ### Firefox: "Bookmarklet not found"
-- Bookmark must be named exactly `Dom Extractor`
+- Drag mode bookmark must be named exactly `Dom Extractor`
+- Precision mode bookmark must be named exactly `Precision Inspector`
 - Must be in: Bookmarks Menu, Bookmarks Toolbar, or Other Bookmarks
 - Nested folders are NOT searched (keep at top level)
 
@@ -363,13 +619,27 @@ Firefox blocks AppleScript JavaScript injection (security feature). Instead:
 - Some elements may be in iframes (not supported)
 - Shadow DOM elements may not be detected
 
-## Security & Privacy
+## Changelog
 
-- **No network access** - Everything runs locally
-- **No extensions** - No browser permissions required  
-- **No sensitive data** - Excludes: passwords, cookies, localStorage, tokens, auth data, query params
-- **Clipboard only** - Data goes to clipboard, nowhere else
-- **Open source** - Full source in `dom-extractor.js`
+### v2.0.0 - Security & Quality Audit
+- **Security**: Added comprehensive input sanitization and length limits
+- **Security**: ReDoS prevention for regex operations
+- **Security**: Memory protection with bounded collections
+- **Feature**: Destination detection shows WHERE links/buttons navigate
+- **Feature**: Animated toast notifications with icons
+- **Feature**: Green flash effect on capture
+- **Performance**: 60fps throttling with RAF batching
+- **Performance**: Element change detection to skip redundant updates
+- **Fix**: Variable shadowing in catch blocks
+- **Fix**: Removed unused variables
+- **Fix**: Promise rejection handling for clipboard operations
+
+### v1.0.0 - Initial Release
+- Drag mode with 12 agentic extraction functions
+- Precision mode with real-time hover inspection
+- Network interception for fetch/XHR
+- Full ES5 compatibility for Safari/IE11
+- Firefox bookmarklet support
 
 ## License
 
