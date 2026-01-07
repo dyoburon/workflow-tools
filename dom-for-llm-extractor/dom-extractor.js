@@ -226,9 +226,17 @@
             if (!text.trim()) {
                 text = el.textContent || '';
             }
+            // Early length limit before regex processing (prevent DoS)
+            if (text.length > 10000) {
+                text = text.substring(0, 10000);
+            }
             var cleaned = text.replace(/\s+/g, ' ').trim();
+            // Truncate for output
+            if (cleaned.length > 200) {
+                cleaned = cleaned.substring(0, 197) + '...';
+            }
             return cleaned;
-        } catch (e) {
+        } catch (err) {
             return '';
         }
     }
@@ -463,9 +471,12 @@
             var role = el.getAttribute('role');
             if (role) info.role = role;
 
-            // ARIA label
+            // ARIA label (sanitized: length limit + control char strip)
             var ariaLabel = el.getAttribute('aria-label');
-            if (ariaLabel) info.ariaLabel = ariaLabel;
+            if (ariaLabel) {
+                ariaLabel = ariaLabel.substring(0, 200).replace(/[\x00-\x1F\x7F]/g, '');
+                if (ariaLabel) info.ariaLabel = ariaLabel;
+            }
 
             var ariaLabelledBy = el.getAttribute('aria-labelledby');
             if (ariaLabelledBy) {
@@ -501,11 +512,12 @@
                 }
             }
 
-            // Data attributes (non-sensitive)
+            // Data attributes (non-sensitive, length-limited)
             var dataAttrs = {};
             for (var i = 0; i < el.attributes.length; i++) {
                 var attr = el.attributes[i];
                 if (attr.name.indexOf('data-') === 0 &&
+                    attr.value.length <= 500 &&
                     attr.name.indexOf('token') === -1 &&
                     attr.name.indexOf('key') === -1 &&
                     attr.name.indexOf('secret') === -1 &&
@@ -955,7 +967,11 @@
             var loadingPatterns = ['loading', 'spinner', 'skeleton', 'shimmer', 'pending'];
             // Handle SVG className (SVGAnimatedString) and regular className, with null safety
             var classStr = getSafeClassName(el);
+            // Length limit to prevent performance issues
+            if (classStr.length > 1000) classStr = classStr.substring(0, 1000);
             var ariaLabel = el.getAttribute('aria-label') || '';
+            // Sanitize aria-label
+            if (ariaLabel.length > 200) ariaLabel = ariaLabel.substring(0, 200);
             var ariaBusy = el.getAttribute('aria-busy');
             
             var classLower = classStr.toLowerCase();
@@ -1235,6 +1251,7 @@
             
             // Drop zone detection
             var classStr = getSafeClassName(el);
+            if (classStr.length > 1000) classStr = classStr.substring(0, 1000);
             if (classStr.indexOf('drop') !== -1 || classStr.indexOf('upload') !== -1) {
                 hints.dropZone = true;
             }
@@ -1691,6 +1708,7 @@
             
             // Check for error classes
             var classStr = getSafeClassName(el);
+            if (classStr.length > 1000) classStr = classStr.substring(0, 1000);
             var classLower = classStr.toLowerCase();
             if (classLower.indexOf('error') !== -1 || classLower.indexOf('invalid') !== -1) {
                 errorState.hasErrorClass = true;
@@ -1744,7 +1762,10 @@
             
             // Geolocation hints
             var onclick = el.getAttribute('onclick') || '';
+            // Limit onclick length to prevent ReDoS
+            if (onclick.length > 1000) onclick = onclick.substring(0, 1000);
             var classStr = getSafeClassName(el);
+            if (classStr.length > 1000) classStr = classStr.substring(0, 1000);
             if (onclick.indexOf('geolocation') !== -1 || 
                 classStr.indexOf('location') !== -1 ||
                 classStr.indexOf('gps') !== -1) {
@@ -1778,6 +1799,7 @@
         
         try {
             var classStr = getSafeClassName(el);
+            if (classStr.length > 1000) classStr = classStr.substring(0, 1000);
             var classLower = classStr.toLowerCase();
             
             // Check for async/ajax indicators
