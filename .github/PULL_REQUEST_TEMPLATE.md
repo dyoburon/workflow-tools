@@ -1,6 +1,12 @@
 ## Summary
 
-[1-2 sentence description of what this PR does]
+[1-2 sentence description of what this PR does and why]
+
+## Motivation
+
+[Why is this change needed? What problem does it solve? Link to issue if applicable]
+
+Fixes: #[issue number] *(if applicable)*
 
 ## Changes
 
@@ -9,32 +15,46 @@
 | [Change 1] | [Description] |
 | [Change 2] | [Description] |
 
-## Details
+## How It Works
 
-[Detailed explanation of the main changes]
+[Brief explanation of the approach/architecture. Help reviewers build a mental model]
 
 ```
-[Code example or output example if applicable]
+[Code example, command, or output if applicable]
 ```
-
-### Features:
-- **[Feature 1]**: [Description]
-- **[Feature 2]**: [Description]
-- **[Feature 3]**: [Description]
 
 ## Files
 
 | File | Status | Purpose |
 |------|--------|---------|
-| `[filename]` | ✨ New / Updated / Deleted | [Purpose] |
-| `[filename]` | ✨ New / Updated / Deleted | [Purpose] |
+| `[filename]` | ✨ New | [Purpose] |
+| `[filename]` | 🔧 Updated | [Purpose] |
+| `[filename]` | 🗑️ Deleted | [Purpose] |
+
+## Screenshots
+
+[GIF or screenshots if UI changes. Delete section if not applicable]
 
 ## Setup
 
-[Any setup steps required, or "None" if not applicable]
+[Any setup steps required, or "None"]
 
-## Testing
+## Test Plan
 
-- [x] [Test 1]
-- [x] [Test 2]
-- [x] [Test 3]
+[Describe what was tested and how. Not just checkboxes - explain the verification]
+
+- [x] [Test scenario 1]
+- [x] [Test scenario 2]
+- [x] [Test scenario 3]
+
+## Breaking Changes
+
+[List any breaking changes, or "None"]
+
+## Checklist
+
+- [ ] Code follows project style guidelines
+- [ ] Self-reviewed the diff
+- [ ] No merge conflicts
+- [ ] Tests pass locally
+- [ ] Documentation updated (if applicable)
