@@ -39,9 +39,54 @@ else
     TOKEN_DISPLAY="0K"
 fi
 
-# Get CUMULATIVE totals for cost tracking (from context_window level, not current_usage)
-TOTAL_INPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
-TOTAL_OUTPUT_TOKENS=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
+# Get CUMULATIVE totals for cost tracking
+# Read from ALL session files (main + agent) to include agent tokens
+get_session_tokens() {
+    local cwd="$1"
+    local claude_path=$(echo "$cwd" | sed 's|/|-|g')
+    local session_dir="$HOME/.claude/projects/$claude_path"
+
+    if [ ! -d "$session_dir" ] || ! ls "$session_dir"/*.jsonl >/dev/null 2>&1; then
+        echo "0 0"
+        return
+    fi
+
+    python3 << PYEOF
+import json
+import glob
+import os
+
+session_dir = "$session_dir"
+input_tokens = 0
+output_tokens = 0
+
+for filepath in glob.glob(os.path.join(session_dir, "*.jsonl")):
+    try:
+        with open(filepath, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                    if data.get("type") == "assistant":
+                        msg = data.get("message", {})
+                        usage = msg.get("usage", {})
+                        if usage:
+                            input_tokens += usage.get("input_tokens", 0)
+                            output_tokens += usage.get("output_tokens", 0)
+                except json.JSONDecodeError:
+                    continue
+    except (IOError, OSError):
+        continue
+
+print(f"{input_tokens} {output_tokens}")
+PYEOF
+}
+
+SESSION_TOKENS=$(get_session_tokens "$CWD")
+TOTAL_INPUT_TOKENS=$(echo "$SESSION_TOKENS" | cut -d' ' -f1)
+TOTAL_OUTPUT_TOKENS=$(echo "$SESSION_TOKENS" | cut -d' ' -f2)
 
 # Color-coded context indicator
 if [ "$PERCENT" -ge 80 ]; then
