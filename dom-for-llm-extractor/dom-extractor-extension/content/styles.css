@@ -1,0 +1,149 @@
+/* DOM Extractor Extension Styles */
+
+/* Overlay for drag mode */
+.dom-extractor-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  cursor: crosshair !important;
+  z-index: 2147483647 !important;
+  background: transparent !important;
+  pointer-events: auto !important;
+}
+
+/* Selection box for drag mode */
+.dom-extractor-box {
+  position: fixed !important;
+  border: 2px solid #0066ff !important;
+  background: rgba(0, 102, 255, 0.1) !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+}
+
+/* Toast notification */
+.dom-extractor-toast {
+  position: fixed !important;
+  top: 20px !important;
+  right: 20px !important;
+  background: #1a1a2e !important;
+  color: #eee !important;
+  padding: 16px 24px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-family: 'SF Mono', Monaco, Consolas, monospace !important;
+  z-index: 2147483647 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+  max-width: 300px !important;
+  white-space: pre-wrap !important;
+  line-height: 1.5 !important;
+  border: 1px solid #333 !important;
+  opacity: 0.95 !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.dom-extractor-toast.success {
+  background: #1a3a2e !important;
+  border-color: #2a5a3e !important;
+}
+
+.dom-extractor-toast.error {
+  background: #3a1a1e !important;
+  border-color: #5a2a2e !important;
+}
+
+/* Precision mode highlight */
+.dom-extractor-highlight {
+  position: fixed !important;
+  pointer-events: none !important;
+  z-index: 2147483646 !important;
+  border: 2px solid #0066ff !important;
+  background: rgba(0, 102, 255, 0.08) !important;
+  transition: all 0.05s ease-out !important;
+}
+
+.dom-extractor-highlight.captured {
+  background: rgba(0, 255, 102, 0.15) !important;
+  border-color: #00ff66 !important;
+}
+
+/* Precision mode floating label */
+.dom-extractor-label {
+  position: fixed !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  background: rgba(26, 26, 46, 0.95) !important;
+  color: #eee !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-family: 'SF Mono', Monaco, Consolas, monospace !important;
+  line-height: 1.4 !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3) !important;
+  max-width: 350px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.dom-extractor-label .selector {
+  color: #88ccff !important;
+  font-weight: 600 !important;
+}
+
+.dom-extractor-label .dimensions {
+  color: #aaa !important;
+  margin-left: 8px !important;
+}
+
+.dom-extractor-label .destination {
+  color: #88ff88 !important;
+  margin-left: 8px !important;
+}
+
+.dom-extractor-label .text-preview {
+  display: block !important;
+  color: #999 !important;
+  font-size: 10px !important;
+  margin-top: 4px !important;
+  max-width: 300px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Precision mode status bar */
+.dom-extractor-statusbar {
+  position: fixed !important;
+  top: 12px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 2147483647 !important;
+  background: rgba(26, 26, 46, 0.9) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  color: #eee !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.dom-extractor-statusbar .mode {
+  color: #0066ff !important;
+  font-weight: 600 !important;
+}
+
+.dom-extractor-statusbar .timer {
+  color: #888 !important;
+  font-family: 'SF Mono', Monaco, Consolas, monospace !important;
+}
+
+.dom-extractor-statusbar .hint {
+  color: #666 !important;
+  font-size: 11px !important;
+}
