@@ -54,6 +54,7 @@ fi
 
 # Get git branch (if in a git repo)
 CWD=$(echo "$input" | jq -r '.cwd // "."')
+DIR_NAME=$(basename "$CWD")
 GIT_BRANCH=$(cd "$CWD" 2>/dev/null && git branch --show-current 2>/dev/null || echo "")
 if [ -n "$GIT_BRANCH" ]; then
     GIT_DISPLAY="📁 $GIT_BRANCH"
@@ -146,4 +147,4 @@ else
 fi
 
 # Build status line
-echo "[$MODEL] $CONTEXT_ICON ${PERCENT}% ($TOKEN_DISPLAY) | $GIT_DISPLAY | $TIME_DISPLAY"
+echo "[$MODEL] $CONTEXT_ICON ${PERCENT}% ($TOKEN_DISPLAY) | 📂 $DIR_NAME | $GIT_DISPLAY | $TIME_DISPLAY"
