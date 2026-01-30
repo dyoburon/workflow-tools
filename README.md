@@ -55,6 +55,7 @@ Plus a statusline showing context usage, cost, and duration.
 |--------|--------|
 | `Cmd+Option+R` | Record window position |
 | `Cmd+Option+2-9` | Restore saved position |
+| `Cmd+Option+S` | Screenshot → path to clipboard |
 
 [Full documentation →](window-recorder/README.md)
 
