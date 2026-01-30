@@ -55,13 +55,17 @@ Plus a statusline showing context usage, cost, and duration.
 |--------|--------|
 | `Cmd+Option+R` | Record window position |
 | `Cmd+Option+2-9` | Restore saved position |
-| `Cmd+Option+S` | Screenshot → path to clipboard |
-
 [Full documentation →](window-recorder/README.md)
 
 ### 4. Image to Clipboard (`image-to-clipboard-for-claude/`)
 
-Browser bookmarklet to copy images to clipboard for pasting into Claude.
+**macOS only** - Hammerspoon script that takes an interactive screenshot and copies the file path to your clipboard for pasting into Claude.
+
+| Hotkey | Action |
+|--------|--------|
+| `Cmd+Option+S` | Screenshot → path to clipboard |
+
+[Full documentation →](image-to-clipboard-for-claude/README.md)
 
 ### 5. DOM Extractor (`dom-for-llm-extractor/`)
 
