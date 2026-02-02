@@ -34,6 +34,7 @@ echo "This will install:"
 echo "  - force-alt-tab: Makes Cmd+Tab always unhide apps"
 echo "  - window-recorder: Record & replay window positions"
 echo "  - dom-for-llm-extractor: Page measure tool for DOM context"
+echo "  - eyedropper-color-picker: Pick hex color from any pixel on screen"
 echo ""
 
 # Check for existing config
@@ -116,6 +117,14 @@ generate_config() {
     echo '        hs.alert.show("Page Measure: Not in a supported browser")'
     echo '    end'
     echo 'end)'
+    echo ""
+    echo ""
+    echo "-- =================================================="
+    echo "-- Eyedropper Color Picker"
+    echo "-- Cmd+Option+E to pick hex color from any pixel"
+    echo "-- =================================================="
+    echo ""
+    cat "$SCRIPT_DIR/eyedropper-color-picker/init.lua"
 }
 
 if [ "$MODE" = "replace" ]; then
@@ -137,4 +146,5 @@ echo "  - Cmd+Tab now always unhides apps"
 echo "  - Cmd+Option+R to record window position"
 echo "  - Cmd+Option+2-9 to restore positions"
 echo "  - Cmd+Shift+M to measure page elements (in browser)"
+echo "  - Cmd+Option+E to pick hex color from any pixel"
 echo ""

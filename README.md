@@ -67,7 +67,18 @@ Plus a statusline showing context usage, cost, and duration.
 
 [Full documentation →](image-to-clipboard-for-claude/README.md)
 
-### 5. DOM Extractor (`dom-for-llm-extractor/`)
+### 5. Eyedropper Color Picker (`eyedropper-color-picker/`)
+
+**macOS only** - Pick any pixel color on screen and copy the hex value to your clipboard. Works system-wide.
+
+| Hotkey | Action |
+|--------|--------|
+| `Cmd+Option+E` | Activate eyedropper, click to pick color |
+| `Escape` | Cancel |
+
+[Full documentation →](eyedropper-color-picker/README.md)
+
+### 6. DOM Extractor (`dom-for-llm-extractor/`)
 
 JavaScript tool to extract page structure for LLM analysis.
 
